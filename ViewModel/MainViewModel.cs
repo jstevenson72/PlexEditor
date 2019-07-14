@@ -60,8 +60,8 @@ namespace Plex_Database_Editor.ViewModel
 
         public void LoadSettings()
         {
-            DatabasePath = Properties.Settings.Default.DatabasePath;
-            BackupPath = Properties.Settings.Default.BackupPath;
+            databasePath = Properties.Settings.Default.DatabasePath;
+            backupPath = Properties.Settings.Default.BackupPath;
         }
 
         public void SaveSettings()
@@ -77,16 +77,34 @@ namespace Plex_Database_Editor.ViewModel
         public RelayCommand CommandBrowseDBPath => new RelayCommand(BrowseDBPath);
         public RelayCommand CommandBrowseBackupPath => new RelayCommand(BrowseBackupPath);
 
+        private SQLiteConnection GetConnection()
+        {
+            try
+            {
+                var connection = new SQLiteConnection($@"Data Source={DatabasePath}; Version=3; PRAGMA journal_mode = WAL;", true);
+                connection.Open();
+                return connection;
+            }
+            catch (Exception ex)
+            {
+                Message = $"Error Opening Database. {ex}";
+            }
+
+            return null;
+        }
+
         public void SearchMovies()
         {
-            if (!ValidateDatabasePath(DatabasePath))
+            if (!ValidateSettings())
             {
                 return;
             }
 
-            var sqliteConnection = new SQLiteConnection($@"Data Source={DatabasePath};Version=3;");
-
-            sqliteConnection.Open();
+            var sqliteConnection = GetConnection();
+            if (sqliteConnection == null)
+            {
+                return;
+            }
 
             int numRows = 0;
 
@@ -133,15 +151,16 @@ namespace Plex_Database_Editor.ViewModel
             {
                 Movies = movies.OrderByDescending(_ => _.DateAdded).ThenBy(_ => _.Name).ThenBy(_ => _.Year).ToList();
             }
-            else{
+            else
+            {
                 Movies = movies.OrderBy(_ => _.Name).ThenBy(_ => _.Year).ToList();
             }
-            
+
         }
 
         public void Save()
         {
-            if (!ValidateDatabasePath(DatabasePath))
+            if (!ValidateSettings())
             {
                 return;
             }
@@ -151,9 +170,11 @@ namespace Plex_Database_Editor.ViewModel
                 return;
             }
 
-            var sqliteConnection = new SQLiteConnection($@"Data Source={DatabasePath};Version=3;");
-
-            sqliteConnection.Open();
+            var sqliteConnection = GetConnection();
+            if (sqliteConnection == null)
+            {
+                return;
+            }
 
             int numRows = 0;
 
@@ -193,6 +214,8 @@ namespace Plex_Database_Editor.ViewModel
             }
 
             sqliteConnection.Close();
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
         }
 
         public void Clear()
@@ -242,11 +265,17 @@ namespace Plex_Database_Editor.ViewModel
             }
         }
 
-        private bool ValidateDatabasePath(string path)
+        private bool ValidateSettings()
         {
-            if (!File.Exists(path))
+            if (!File.Exists(DatabasePath))
             {
-                Message = "Path Not Found.";
+                Message = "Database Path Not Found.";
+                return false;
+            }
+
+            if (!Directory.Exists(BackupPath))
+            {
+                Message = "Backup Path Not Found.";
                 return false;
             }
 
@@ -274,6 +303,8 @@ namespace Plex_Database_Editor.ViewModel
             {
                 databasePath = value;
                 RaisePropertyChanged();
+
+                SaveSettings();
             }
         }
 
@@ -302,6 +333,8 @@ namespace Plex_Database_Editor.ViewModel
             {
                 backupPath = value;
                 RaisePropertyChanged();
+
+                SaveSettings();
             }
         }
 
