@@ -15,6 +15,7 @@ namespace Plex_Database_Editor.ViewModel
         private string backupPath;
         private List<Movie> movies;
         private string message;
+        private bool sortRecentFirst;
 
         public MainViewModel()
         {
@@ -106,13 +107,14 @@ namespace Plex_Database_Editor.ViewModel
 
                         var movie = new Movie
                         {
+                            Id = Convert.ToInt32(reader["id"]),
                             Name = Convert.ToString(reader["title"]),
                             Year = Convert.ToString(reader["year"]),
                             DateAdded = Convert.ToDateTime(reader["added_at"])
                         };
 
                         movie.IsNew = movie.DateAdded >= DateTime.Now.AddDays(-14);
-
+                        movie.OriginalHash = movie.GetHashCode();
                         movies.Add(movie);
                     }
 
@@ -127,7 +129,14 @@ namespace Plex_Database_Editor.ViewModel
 
             sqliteConnection.Close();
 
-            Movies = movies.OrderBy(_=>_.Name).ThenBy(_=>_.Year).ToList();
+            if (SortRecentFirst)
+            {
+                Movies = movies.OrderByDescending(_ => _.DateAdded).ThenBy(_ => _.Name).ThenBy(_ => _.Year).ToList();
+            }
+            else{
+                Movies = movies.OrderBy(_ => _.Name).ThenBy(_ => _.Year).ToList();
+            }
+            
         }
 
         public void Save()
@@ -142,7 +151,48 @@ namespace Plex_Database_Editor.ViewModel
                 return;
             }
 
-            Message = "Saved Changes.";
+            var sqliteConnection = new SQLiteConnection($@"Data Source={DatabasePath};Version=3;");
+
+            sqliteConnection.Open();
+
+            int numRows = 0;
+
+            var movies = new List<Movie>();
+
+            try
+            {
+                Movies.ForEach(m =>
+                {
+                    if (m.OriginalHash != m.GetHashCode())
+                    {
+                        if (m.IsNew)
+                        {
+                            m.DateAdded = DateTime.Now;
+                        }
+                        else
+                        {
+                            m.DateAdded = m.OriginalyAvailable;
+                        }
+
+                        using (SQLiteCommand cmd = sqliteConnection.CreateCommand())
+                        {
+                            cmd.CommandText = $@"UPDATE metadata_items SET added_at = '{m.DateAdded.ToString("yyyy-MM-dd HH:mm:ss")}' WHERE id = {m.Id}";
+                            cmd.CommandType = System.Data.CommandType.Text;
+                            var results = cmd.ExecuteScalar();
+                            numRows++;
+                        }
+                    }
+                });
+
+                Message = $"Updated {numRows} records.";
+            }
+            catch (Exception exc)
+            {
+                Message = exc.ToString();
+                numRows = 0;
+            }
+
+            sqliteConnection.Close();
         }
 
         public void Clear()
@@ -265,7 +315,15 @@ namespace Plex_Database_Editor.ViewModel
             }
         }
 
-
+        public bool SortRecentFirst
+        {
+            get => sortRecentFirst;
+            set
+            {
+                sortRecentFirst = value;
+                RaisePropertyChanged();
+            }
+        }
     }
 
     public class Movie : ViewModelBase
@@ -312,6 +370,41 @@ namespace Plex_Database_Editor.ViewModel
             }
         }
 
+        public int Id { get; set; }
 
+        public DateTime OriginalyAvailable { get; set; }
+
+        public int OriginalHash { get; set; }
+
+        public override bool Equals(object obj)
+        {
+            return obj is Movie movie &&
+                   dateAdded == movie.dateAdded &&
+                   isNew == movie.isNew &&
+                   name == movie.name &&
+                   year == movie.year &&
+                   Name == movie.Name &&
+                   Year == movie.Year &&
+                   DateAdded == movie.DateAdded &&
+                   IsNew == movie.IsNew &&
+                   Id == movie.Id &&
+                   OriginalyAvailable == movie.OriginalyAvailable;
+        }
+
+        public override int GetHashCode()
+        {
+            var hashCode = 834298102;
+            hashCode = hashCode * -1521134295 + dateAdded.GetHashCode();
+            hashCode = hashCode * -1521134295 + isNew.GetHashCode();
+            hashCode = hashCode * -1521134295 + EqualityComparer<string>.Default.GetHashCode(name);
+            hashCode = hashCode * -1521134295 + EqualityComparer<string>.Default.GetHashCode(year);
+            hashCode = hashCode * -1521134295 + EqualityComparer<string>.Default.GetHashCode(Name);
+            hashCode = hashCode * -1521134295 + EqualityComparer<string>.Default.GetHashCode(Year);
+            hashCode = hashCode * -1521134295 + DateAdded.GetHashCode();
+            hashCode = hashCode * -1521134295 + IsNew.GetHashCode();
+            hashCode = hashCode * -1521134295 + Id.GetHashCode();
+            hashCode = hashCode * -1521134295 + OriginalyAvailable.GetHashCode();
+            return hashCode;
+        }
     }
 }
