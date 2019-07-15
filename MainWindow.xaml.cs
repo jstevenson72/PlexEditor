@@ -25,7 +25,14 @@ namespace Plex_Database_Editor
         {
             InitializeComponent();
 
-            Closing += MainWindow_Closing;     
+            Closing += MainWindow_Closing;
+
+            Loaded += MainWindow_Loaded;
+        }
+
+        private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            Locator.MainVM.RefreshServerState();
         }
 
         private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)

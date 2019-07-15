@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Data.SQLite;
 using System.IO;
 using System.Linq;
+using System.ServiceProcess;
 
 namespace Plex_Database_Editor.ViewModel
 {
@@ -16,15 +17,44 @@ namespace Plex_Database_Editor.ViewModel
         private List<Movie> movies;
         private string message;
         private bool sortRecentFirst;
+        private string serviceName;
+        private string hostIP;
+        private string hostState;
+        private string password;
+        private string username;
+        private string domain;
+
+        public RelayCommand CommandSearch => new RelayCommand(SearchMovies);
+        public RelayCommand CommandSave => new RelayCommand(Save);
+        public RelayCommand CommandClear => new RelayCommand(Clear);
+        public RelayCommand CommandBrowseDBPath => new RelayCommand(BrowseDBPath);
+
+        internal void RefreshServerState()
+        {
+            HostState = GetServerState();
+        }
+
+        public RelayCommand CommandBrowseBackupPath => new RelayCommand(BrowseBackupPath);
 
         public MainViewModel()
         {
+            LoadSettings();
+        }
+
+        public void LoadSettings()
+        {
             if (IsInDesignMode)
             {
+                ServiceName = @"PlexService";
+                HostIP = @"192.168.1.129";
+                HostState = "Running...";
                 DatabasePath = @"\\192.168.1.129\plexssd\PlexMetaData\PlexData\Plex Media Server\Plug-in Support\Databases";
                 BackupPath = @"D:\Temp";
                 Search = "Movie";
-                Message = "Error!";
+                Message = "Error Message Here!";
+                Domain = "domain";
+                Username = "User";
+                Password = "Pass";
                 Movies = new List<Movie> {
                     new Movie { Name = "Movie 1", Year="2007", DateAdded = DateTime.Now, IsNew = false },
                     new Movie { Name = "Movie 2", Year="2001", DateAdded = DateTime.Now, IsNew = false },
@@ -54,28 +84,27 @@ namespace Plex_Database_Editor.ViewModel
             }
             else
             {
-                LoadSettings();
+                databasePath = Properties.Settings.Default.DatabasePath;
+                backupPath = Properties.Settings.Default.BackupPath;
+                serviceName = Properties.Settings.Default.ServiceName;
+                hostIP = Properties.Settings.Default.HostIP;
+                username = Properties.Settings.Default.Username;
+                password = Properties.Settings.Default.Password;
+                domain = null;
             }
-        }
-
-        public void LoadSettings()
-        {
-            databasePath = Properties.Settings.Default.DatabasePath;
-            backupPath = Properties.Settings.Default.BackupPath;
         }
 
         public void SaveSettings()
         {
+            Properties.Settings.Default.ServiceName = ServiceName;
+            Properties.Settings.Default.HostIP = HostIP;
             Properties.Settings.Default.DatabasePath = DatabasePath;
             Properties.Settings.Default.BackupPath = BackupPath;
+            Properties.Settings.Default.Username = Username;
+            Properties.Settings.Default.Password = Password;
+            Properties.Settings.Default.Domain = Domain;
             Properties.Settings.Default.Save();
         }
-
-        public RelayCommand CommandSearch => new RelayCommand(SearchMovies);
-        public RelayCommand CommandSave => new RelayCommand(Save);
-        public RelayCommand CommandClear => new RelayCommand(Clear);
-        public RelayCommand CommandBrowseDBPath => new RelayCommand(BrowseDBPath);
-        public RelayCommand CommandBrowseBackupPath => new RelayCommand(BrowseBackupPath);
 
         private SQLiteConnection GetConnection()
         {
@@ -91,6 +120,72 @@ namespace Plex_Database_Editor.ViewModel
             }
 
             return null;
+        }
+
+        private void StopServer()
+        {
+            if (!ValidateSettings())
+            {
+                return;
+            }
+
+            try
+            {
+                ServiceController sc = new ServiceController(ServiceName, HostIP);
+                sc.Stop();
+            }
+            catch (Exception ex)
+            {
+                HostState = ex.Message;
+            }
+        }
+
+        private void StartServer()
+        {
+            if (!ValidateSettings())
+            {
+                return;
+            }
+
+            try
+            {
+                ServiceController sc = new ServiceController(ServiceName, HostIP);
+                sc.Start();
+            }
+            catch (Exception ex)
+            {
+                HostState = ex.Message;
+            }
+        }
+
+        private string GetServerState()
+        {
+            if (!ValidateSettings())
+            {
+                return null;
+            }
+
+            try
+            {
+                var context = new WrapperImpersonationContext(Domain, Username, Password);
+                if (context.Enter())
+                {
+                    ServiceController sc = new ServiceController(ServiceName, HostIP);
+                    var status = sc.Status.ToString();
+
+                    context.Leave();
+
+                    return status;
+                }
+                else
+                {
+                    return context.Error;
+                }
+            }
+            catch (Exception ex)
+            {
+                return ex.Message;
+            }
         }
 
         public void SearchMovies()
@@ -267,6 +362,12 @@ namespace Plex_Database_Editor.ViewModel
 
         private bool ValidateSettings()
         {
+            if (string.IsNullOrEmpty(serviceName) || string.IsNullOrEmpty(HostIP) || string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
+            {
+                Message = "Please Set Plex Server Info!";
+                return false;
+            }
+
             if (!File.Exists(DatabasePath))
             {
                 Message = "Database Path Not Found.";
@@ -280,6 +381,83 @@ namespace Plex_Database_Editor.ViewModel
             }
 
             return true;
+        }
+
+        public string ServiceName
+        {
+            get => serviceName;
+            set
+            {
+                serviceName = value;
+                RaisePropertyChanged();
+
+                SaveSettings();
+
+                HostState = GetServerState();
+            }
+        }
+
+        public string HostIP
+        {
+            get => hostIP;
+            set
+            {
+                hostIP = value;
+                RaisePropertyChanged();
+
+                SaveSettings();
+
+                HostState = GetServerState();
+            }
+        }
+        public string Domain
+        {
+            get => domain;
+            set
+            {
+                domain = value;
+                RaisePropertyChanged();
+
+                SaveSettings();
+
+                HostState = GetServerState();
+            }
+        }
+        public string Username
+        {
+            get => username;
+            set
+            {
+                username = value;
+                RaisePropertyChanged();
+
+                SaveSettings();
+
+                HostState = GetServerState();
+            }
+        }
+        public string Password
+        {
+            get => password;
+            set
+            {
+                password = value;
+                RaisePropertyChanged();
+
+                SaveSettings();
+
+                HostState = GetServerState();
+            }
+        }
+
+        public string HostState
+        {
+            get => hostState;
+            set
+            {
+                hostState = value;
+                RaisePropertyChanged();
+            }
         }
 
         public string Message

@@ -6,10 +6,12 @@
         xmlns:local="clr-namespace:Plex_Database_Editor"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         Title="Plex Editor"
-        Width="700"
-        Height="450"
+        MinWidth="700"
+        MinHeight="450"
         Background="#FFF5EEE1"
         DataContext="{x:Static l:Locator.MainVM}"
+        ResizeMode="CanResizeWithGrip"
+        SizeToContent="WidthAndHeight"
         mc:Ignorable="d">
     <Window.Resources>
         <DataTemplate x:Key="DataTemplateMovie">
@@ -42,7 +44,96 @@
         </DataTemplate>
     </Window.Resources>
     <DockPanel Margin="10">
-        <DockPanel Margin="0,10"
+        <DockPanel Margin="0,5,0,0"
+                   VerticalAlignment="Top"
+                   DockPanel.Dock="Top">
+            <TextBlock Width="100"
+                       VerticalAlignment="Center"
+                       Text="Plex Account"
+                       TextWrapping="Wrap" />
+            <TextBlock HorizontalAlignment="Left"
+                       VerticalAlignment="Center"
+                       Text="Domain"
+                       TextWrapping="Wrap" />
+
+            <TextBox Width="100"
+                     Margin="10,0"
+                     HorizontalAlignment="Left"
+                     VerticalAlignment="Center"
+                     Text="{Binding Domain}"
+                     TextWrapping="Wrap" />
+            <TextBlock HorizontalAlignment="Left"
+                       VerticalAlignment="Center"
+                       Text="Username"
+                       TextWrapping="Wrap" />
+            <TextBox Width="100"
+                     Margin="10,0"
+                     HorizontalAlignment="Left"
+                     VerticalAlignment="Center"
+                     Text="{Binding Username}"
+                     TextWrapping="Wrap" />
+            <TextBlock HorizontalAlignment="Left"
+                       VerticalAlignment="Center"
+                       Text="Password"
+                       TextWrapping="Wrap" />
+            <TextBox Width="100"
+                     Margin="10,0"
+                     HorizontalAlignment="Left"
+                     VerticalAlignment="Center"
+                     Text="{Binding Password}"
+                     TextWrapping="Wrap" />
+
+        </DockPanel>
+
+        <DockPanel Margin="0,5,0,0"
+                   VerticalAlignment="Top"
+                   DockPanel.Dock="Top">
+            <TextBlock Width="100"
+                       VerticalAlignment="Center"
+                       Text="Plex Server"
+                       TextWrapping="Wrap" />
+            <Button Width="35"
+                    VerticalAlignment="Center"
+                    Command="{Binding CommandBrowseDBPath}"
+                    Content="START"
+                    DockPanel.Dock="Right" />
+            <Button Width="35"
+                    Margin="0,0,5,0"
+                    VerticalAlignment="Center"
+                    Command="{Binding CommandBrowseDBPath}"
+                    Content="STOP"
+                    DockPanel.Dock="Right" />
+            <TextBlock HorizontalAlignment="Left"
+                       VerticalAlignment="Center"
+                       Text="Service Name"
+                       TextWrapping="Wrap" />
+
+            <TextBox Width="100"
+                     Margin="10,0"
+                     HorizontalAlignment="Left"
+                     VerticalAlignment="Center"
+                     Text="{Binding ServiceName}"
+                     TextWrapping="Wrap" />
+            <TextBlock HorizontalAlignment="Left"
+                       VerticalAlignment="Center"
+                       Text="IP Address"
+                       TextWrapping="Wrap" />
+            <TextBox Width="100"
+                     Margin="10,0"
+                     HorizontalAlignment="Left"
+                     VerticalAlignment="Center"
+                     Text="{Binding HostIP}"
+                     TextWrapping="Wrap" />
+            <TextBlock HorizontalAlignment="Left"
+                       VerticalAlignment="Center"
+                       FontWeight="Bold"
+                       Foreground="#FF2E61D1"
+                       Text="{Binding HostState}"
+                       TextWrapping="Wrap" />
+
+        </DockPanel>
+
+        <DockPanel Margin="0,5,0,0"
                    VerticalAlignment="Top"
                    DockPanel.Dock="Top">
             <TextBlock Width="100"
@@ -55,13 +146,14 @@
                     Content="Browse..."
                     DockPanel.Dock="Right" />
 
-            <TextBox Margin="10,0"
+            <TextBox Height="18"
+                     Margin="0,0,10,0"
                      VerticalAlignment="Center"
                      Text="{Binding DatabasePath}"
                      TextWrapping="Wrap" />
 
         </DockPanel>
-        <DockPanel Margin="0,10"
+        <DockPanel Margin="0,5,0,0"
                    VerticalAlignment="Top"
                    DockPanel.Dock="Top">
             <TextBlock Width="100"
@@ -74,13 +166,14 @@
                     Content="Browse..."
                     DockPanel.Dock="Right" />
 
-            <TextBox Margin="10,0"
+            <TextBox Height="18"
+                     Margin="0,0,10,0"
                      VerticalAlignment="Center"
                      Text="{Binding BackupPath}"
                      TextWrapping="Wrap" />
 
         </DockPanel>
-        <DockPanel Margin="0,10"
+        <DockPanel Margin="0,5,0,0"
                    VerticalAlignment="Top"
                    DockPanel.Dock="Top">
             <Button Width="75"
@@ -89,6 +182,7 @@
                     Content="SEARCH"
                     DockPanel.Dock="Right" />
             <TextBox Width="200"
+                     Height="18"
                      Margin="10,0"
                      HorizontalAlignment="Right"
                      VerticalAlignment="Center"
@@ -111,7 +205,7 @@
                        Text="{Binding Message}"
                        TextWrapping="Wrap" />
         </DockPanel>
-        <ListBox Margin="0,0,0,5"
+        <ListBox Margin="0,5"
                  HorizontalContentAlignment="Stretch"
                  DockPanel.Dock="Bottom"
                  ItemTemplate="{DynamicResource DataTemplateMovie}"
